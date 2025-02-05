@@ -1,6 +1,5 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 import pytest
 import time
 
@@ -13,21 +12,26 @@ dados_teste = [
 ]
 
 # Configuração do driver (abre o navegador)
-@pytest.fixture # Define essa função como uma configuração fixa para os testes.
+@pytest.fixture
 def driver():
     driver = webdriver.Chrome()  # Usa o ChromeDriver
-    driver.get("https://www.kabum.com.br")  # Substitua pela URL real da página
+    driver.get("https://www.kabum.com.br/")  # Substitua pela URL real da página
     driver.maximize_window()
     yield driver  # Retorna o driver para os testes
     driver.quit()  # Fecha o navegador no final dos testes
 
 # Teste para validar o cadastro com diferentes dados
-@pytest.mark.parametrize("dados", dados_teste) # Faz com que o teste seja repetido para cada conjunto de dados da lista dados_teste
+@pytest.mark.parametrize("dados", dados_teste)
 def test_cadastro_newsletter(driver, dados):
     # Encontrar os campos e preenchê-los
+    campo_botão = driver.find_element(By.ID, "onetrust-accept-btn-handler")
     campo_nome = driver.find_element(By.ID, "formNewsletterName")
     campo_email = driver.find_element(By.ID, "formNewsletterEmail")
     botao_envio = driver.find_element(By.ID, "botaoEnvioNewsletter")
+
+    campo_botão.click()
+
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
     # Limpa os campos antes de preencher
     campo_nome.clear()
@@ -47,4 +51,3 @@ def test_cadastro_newsletter(driver, dados):
         assert "sucesso" in mensagem.text.lower() or "erro" in mensagem.text.lower()
     except:
         pytest.fail("Nenhuma mensagem de resposta encontrada")
-
