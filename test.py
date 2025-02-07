@@ -1,5 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import pytest
 import time
 
@@ -23,15 +25,25 @@ def driver():
 # Teste para validar o cadastro com diferentes dados
 @pytest.mark.parametrize("dados", dados_teste)
 def test_cadastro_newsletter(driver, dados):
-    # Encontrar os campos e preenchê-los
-    campo_botão = driver.find_element(By.ID, "onetrust-accept-btn-handler")
-    campo_nome = driver.find_element(By.ID, "formNewsletterName")
+    wait = WebDriverWait(driver, 10)  # Aguarda até 10 segundos
+
+    # Aceitar cookies se necessário
+    try:
+        botao_cookies = wait.until(EC.element_to_be_clickable((By.ID, "onetrust-accept-btn-handler")))
+        botao_cookies.click()
+    except:
+        print("Nenhum botão de cookies encontrado")
+
+    # Encontrar os campos do formulário
+    campo_nome = wait.until(EC.presence_of_element_located((By.ID, "formNewsletterName")))
     campo_email = driver.find_element(By.ID, "formNewsletterEmail")
     botao_envio = driver.find_element(By.ID, "botaoEnvioNewsletter")
 
-    campo_botão.click()
+    # Rolar a página até o final para garantir visibilidade
+    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", campo_nome)
+    time.sleep(10)
+    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", botao_envio)
 
-    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
     # Limpa os campos antes de preencher
     campo_nome.clear()
@@ -43,11 +55,16 @@ def test_cadastro_newsletter(driver, dados):
 
     # Clica no botão de envio
     botao_envio.click()
-    time.sleep(2)  # Aguarda carregamento da resposta
 
-    # Verifica se há uma mensagem de erro ou sucesso
+    # Aguarda a mensagem de resposta aparecer
     try:
-        mensagem = driver.find_element(By.CLASS_NAME, "classe_mensagem")  # Substitua pela classe correta
-        assert "sucesso" in mensagem.text.lower() or "erro" in mensagem.text.lower()
+        mensagem = wait.until(EC.visibility_of_element_located(
+            (By.XPATH, "//*[contains(normalize-space(), 'Pronto, agora você receberá ofertas exclusivas no e-mail')]")
+        ))
+
+        # Verifica se o texto contém "sucesso" ou "erro"
+        assert "sucesso" in mensagem.text.lower() or "erro" in mensagem.text.lower(), "Mensagem inesperada"
+
     except:
-        pytest.fail("Nenhuma mensagem de resposta encontrada")
+        pytest.fail("❌ Nenhuma mensagem de resposta encontrada")
+
